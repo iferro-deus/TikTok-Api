@@ -86,40 +86,40 @@ class User:
             )
 
         quoted_username = quote(self.username)
-        r = requests.get(
-            "https://tiktok.com/@{}?lang=en".format(quoted_username),
-            headers={
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
-                "path": "/@{}".format(quoted_username),
-                "Accept-Encoding": "gzip, deflate",
-                "Connection": "keep-alive",
-                "User-Agent": self.parent._user_agent,
-            },
-            proxies=User.parent._format_proxy(kwargs.get("proxy", None)),
-            cookies=User.parent._get_cookies(**kwargs),
-            **User.parent._requests_extra_kwargs,
-        )
+        # r = requests.get(
+        #     "https://tiktok.com/@{}?lang=en".format(quoted_username),
+        #     headers={
+        #         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+        #         "path": "/@{}".format(quoted_username),
+        #         "Accept-Encoding": "gzip, deflate",
+        #         "Connection": "keep-alive",
+        #         "User-Agent": self.parent._user_agent,
+        #     },
+        #     proxies=User.parent._format_proxy(kwargs.get("proxy", None)),
+        #     cookies=User.parent._get_cookies(**kwargs),
+        #     **User.parent._requests_extra_kwargs,
+        # )
 
-        data = extract_tag_contents(r.text)
-        user = json.loads(data)
+        # data = extract_tag_contents(r.text)
+        # user = json.loads(data)
 
-        user_props = user["props"]["pageProps"]
-        if user_props["statusCode"] == 404:
-            raise NotFoundException(
-                "TikTok user with username {} does not exist".format(self.username)
-            )
+        # user_props = user["props"]["pageProps"]
+        # if user_props["statusCode"] == 404:
+        #     raise NotFoundException(
+        #         "TikTok user with username {} does not exist".format(self.username)
+        #     )
 
-        return user_props["userInfo"]
+        # return user_props["userInfo"]
 
-        """
-        TODO: There is a route for user info, but uses msToken :\
-        processed = self.parent._process_kwargs(kwargs)
-        kwargs["custom_device_id"] = processed.device_id
-
+        # """
+        # TODO: There is a route for user info, but uses msToken :\
+        # processed = self.parent._process_kwargs(kwargs)
+        # kwargs["custom_device_id"] = processed.device_id
+        # """
         query = {
-            "uniqueId": "therock",
+            "uniqueId": quoted_username,
             "secUid": "",
-            "msToken": User.parent._get_cookies()["msToken"]
+            "msToken": "OJb0hnkTxaMO_eqnGPJTbuoF4jSt5PV_TZxXW-LH8fnSBqsOq1BjJ5j-RIxn8hrfiyITTFJGx2kL2qv-61XSUmpJWikJ3062g4hL-L5Ssd3JxvpW5nf82_GQMxoR2Yhb3NKnub4="
         }
 
         path = "api/user/detail/?{}&{}".format(
@@ -127,9 +127,8 @@ class User:
         )
 
         res = User.parent.get_data(path, subdomain="m", **kwargs)
-        print(res)
 
-        return res["userInfo"]"""
+        return res["userInfo"]
 
     def videos(self, count=30, cursor=0, **kwargs) -> Iterator[Video]:
         """
@@ -157,7 +156,7 @@ class User:
 
         while amount_yielded < count:
             query = {
-                "count": 30,
+                "count": count,
                 "id": self.user_id,
                 "cursor": cursor,
                 "type": 1,
@@ -172,7 +171,9 @@ class User:
                 User.parent._add_url_params(), urlencode(query)
             )
 
-            res = User.parent.get_data(path, send_tt_params=True, **kwargs)
+            res = User.parent.get_data(path,send_tt_params=True, **kwargs)
+            
+            # print(res)
 
             videos = res.get("itemList", [])
             for video in videos:
@@ -184,9 +185,15 @@ class User:
                     "TikTok isn't sending more TikToks beyond this point."
                 )
                 return
-
-            cursor = res["cursor"]
-            first = False
+            if "cursor" in res:
+                cursor = res["cursor"]
+                first = False
+                continue
+            else:
+                User.parent.logger.info(
+                    "TikTok has not more cursor in videos."
+                )
+                break
 
     def liked(self, count: int = 30, cursor: int = 0, **kwargs) -> Iterator[Video]:
         """

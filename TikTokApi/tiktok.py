@@ -12,6 +12,11 @@ from urllib.parse import urlencode
 
 import requests
 
+# patch imports
+import pycurl
+import certifi
+from io import BytesIO
+
 from .api.comment import Comment
 from .api.hashtag import Hashtag
 from .api.search import Search
@@ -325,7 +330,6 @@ class TikTokApi:
             "x-secsdk-csrf-token": csrf_token,
             "x-tt-params": tt_params,
         }
-
         self.logger.debug(f"GET: %s\n\theaders: %s", url, headers)
         r = requests.get(
             url,
@@ -375,9 +379,31 @@ class TikTokApi:
             text = r.text
             self.logger.debug("TikTok response: %s", text)
             if len(text) == 0:
-                raise EmptyResponseException(0, None,
-                    "Empty response from Tiktok to " + url
-                ) from None
+                    buffer = BytesIO()
+                    c = pycurl.Curl()
+                    #initializing the request URL
+                    c.setopt(c.URL, url)
+                    #setting options for cURL transfer  
+                    c.setopt(c.WRITEDATA, buffer)
+                    #setting the file name holding the certificates
+                    c.setopt(c.CAINFO, certifi.where())
+                    # perform file transfer
+                    c.perform()
+                    #Ending the session and freeing the resources
+                    print(c.getinfo(c.CONTENT_LENGTH_DOWNLOAD))
+                    c.close()
+                    body = buffer.getvalue()
+                    #decoding the buffer 
+                    posts = json.loads(body.decode('utf-8'))
+                    if len(posts) == 0:
+                        raise EmptyResponseException(0, None,
+                            "Empty response from Tiktok to " + url
+                        ) from None
+
+                    return posts
+                    # raise EmptyResponseException(0, None,
+                    #     "Empty response from Tiktok to " + url
+                    # ) from None
             else:
                 raise InvalidJSONException(0, r, "TikTok sent invalid JSON") from e
 
