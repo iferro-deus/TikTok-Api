@@ -549,7 +549,7 @@ class TikTokApi:
             ) = self.external_signer(
                 kwargs["url"], custom_device_id=kwargs.get("custom_device_id", None)
             )
-        query = {"verifyFp": verify_fp,"X-Bogus":"DFSzKIVOEdXANtzgSsDjuCnA5DCh","_signature": signature}
+        query = {"verifyFp": verify_fp,"X-Bogus":"DFSzswVE0FXANVIWSs9FJmnA5De8","_signature": signature}
         url = "{}&{}".format(kwargs["url"], urlencode(query))
         r = requests.get(
             url,

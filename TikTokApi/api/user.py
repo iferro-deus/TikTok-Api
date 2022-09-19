@@ -9,7 +9,7 @@ from ..exceptions import *
 from ..helpers import extract_tag_contents
 
 from typing import TYPE_CHECKING, ClassVar, Iterator, Optional
-
+from .vidBean import VidBean
 if TYPE_CHECKING:
     from ..tiktok import TikTokApi
     from .video import Video
@@ -119,7 +119,7 @@ class User:
         query = {
             "uniqueId": quoted_username,
             "secUid": "",
-            "msToken": "CaQPVkBg1EtI5t5cqlebUxg05SYsJ48lSRszt2MOtNs97MIEAvxkXqBOQFS7wYQ6BryjgKOCAURuh8eRfzZEYP7llv2vsgdQcd3K-ShYYFtuKap2ZJ6xtZ9qVay40ZAKDMYAa2xwNauvrusA-m4=",
+            "msToken": "pqYmgG5mKwmedyZw17XxHyeXtr5eOjFwEYGXDrBYNC8WdKgmiITq2KlZrdrM8sFURfQ2NuMlUYW30QfKjvjAakEJSEio9JHoxAxHMQ82hn3TmDiHZKCt1i0izP3Bi1ZiopAlrkhj",
         }
 
         path = "api/user/detail/?{}&{}".format(
@@ -193,6 +193,61 @@ class User:
                     "TikTok has not more cursor in videos."
                 )
                 break
+
+    def videoList(self, cursor=0, **kwargs) -> VidBean:
+        """
+        Returns an iterator yielding Video objects.
+
+        - Parameters:
+            - count (int): The amount of videos you want returned.
+            - cursor (int): The unix epoch to get uploaded videos since.
+
+        Example Usage
+        ```py
+        user = api.user(username='therock')
+        for video in user.videos(count=100):
+            # do something
+        ```
+        """
+        bean = VidBean()
+        
+        processed = User.parent._process_kwargs(kwargs)
+        kwargs["custom_device_id"] = processed.device_id
+
+        if not self.user_id and not self.sec_uid:
+            self.__find_attributes()
+
+        query = {
+                "count": 30,
+                "id": self.user_id,
+                "cursor": cursor,
+                "type": 1,
+                "secUid": self.sec_uid,
+                "sourceType": 8,
+                "appId": 1233,
+                "region": processed.region,
+                "priority_region": processed.region,
+                "language": processed.language,
+            }
+        path = "api/post/item_list/?{}&{}".format(
+                User.parent._add_url_params(), urlencode(query)
+            )
+
+        res = User.parent.get_data(path,send_tt_params=True, **kwargs)
+            
+            # print(res)
+
+        videos = res.get("itemList", [])
+
+        for video in videos:
+            vid = self.parent.video(data=video)
+            bean.vidList.append(vid)
+
+        
+        bean.hasMore = res.get("hasMore", False)
+        bean.cursorValue = res["cursor"]
+        return bean
+                
 
     def liked(self, count: int = 30, cursor: int = 0, **kwargs) -> Iterator[Video]:
         """
