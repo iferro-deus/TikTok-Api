@@ -119,7 +119,7 @@ class User:
         query = {
             "uniqueId": quoted_username,
             "secUid": "",
-            "msToken": "OJb0hnkTxaMO_eqnGPJTbuoF4jSt5PV_TZxXW-LH8fnSBqsOq1BjJ5j-RIxn8hrfiyITTFJGx2kL2qv-61XSUmpJWikJ3062g4hL-L5Ssd3JxvpW5nf82_GQMxoR2Yhb3NKnub4="
+            "msToken": "CaQPVkBg1EtI5t5cqlebUxg05SYsJ48lSRszt2MOtNs97MIEAvxkXqBOQFS7wYQ6BryjgKOCAURuh8eRfzZEYP7llv2vsgdQcd3K-ShYYFtuKap2ZJ6xtZ9qVay40ZAKDMYAa2xwNauvrusA-m4=",
         }
 
         path = "api/user/detail/?{}&{}".format(
@@ -150,7 +150,6 @@ class User:
 
         if not self.user_id and not self.sec_uid:
             self.__find_attributes()
-
         first = True
         amount_yielded = 0
 
@@ -339,19 +338,25 @@ class User:
         self.username = username
 
     def __find_attributes(self) -> None:
+        """
+        TODO try to make this works again
+        """
         # It is more efficient to check search first, since self.user_object() makes HTML request.
-        found = False
-        for u in self.parent.search.users(self.username):
-            if u.username == self.username:
-                found = True
-                self.__update_id_sec_uid_username(u.user_id, u.sec_uid, u.username)
-                break
+        # found = False
+        # print(self)
+        # for u in self.parent.search.users(self.username):
+        #     print("dentro")
+        #     print(u)
+        #     if u.username == self.username:
+        #         found = True
+        #         self.__update_id_sec_uid_username(u.user_id, u.sec_uid, u.username)
+        #         break
 
-        if not found:
-            user_object = self.info()
-            self.__update_id_sec_uid_username(
-                user_object["id"], user_object["secUid"], user_object["uniqueId"]
-            )
+        # if not found:
+        user_object = self.info()
+        self.__update_id_sec_uid_username(
+            user_object["id"], user_object["secUid"], user_object["uniqueId"]
+        )
 
     def __repr__(self):
         return self.__str__()

@@ -338,7 +338,6 @@ class TikTokApi:
             proxies=self._format_proxy(processed.proxy),
             **self._requests_extra_kwargs,
         )
-
         self.cookie_jar = r.cookies
 
         try:
@@ -390,7 +389,6 @@ class TikTokApi:
                     # perform file transfer
                     c.perform()
                     #Ending the session and freeing the resources
-                    print(c.getinfo(c.CONTENT_LENGTH_DOWNLOAD))
                     c.close()
                     body = buffer.getvalue()
                     #decoding the buffer 
@@ -551,7 +549,7 @@ class TikTokApi:
             ) = self.external_signer(
                 kwargs["url"], custom_device_id=kwargs.get("custom_device_id", None)
             )
-        query = {"verifyFp": verify_fp, "_signature": signature}
+        query = {"verifyFp": verify_fp,"X-Bogus":"DFSzKIVOEdXANtzgSsDjuCnA5DCh","_signature": signature}
         url = "{}&{}".format(kwargs["url"], urlencode(query))
         r = requests.get(
             url,
