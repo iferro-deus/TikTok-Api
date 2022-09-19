@@ -149,6 +149,8 @@ class browser(BrowserInterface):
 
         return sign + base36
 
+
+
     def gen_verifyFp(self):
         chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"[:]
         chars_len = len(chars)
