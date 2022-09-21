@@ -10,6 +10,8 @@ from ..helpers import extract_tag_contents
 
 from typing import TYPE_CHECKING, ClassVar, Iterator, Optional
 from .vidBean import VidBean
+from playwright.sync_api import sync_playwright
+
 if TYPE_CHECKING:
     from ..tiktok import TikTokApi
     from .video import Video
@@ -79,56 +81,27 @@ class User:
         ```
         """
 
-        # TODO: Find the one using only user_id & sec_uid
         if not self.username:
             raise TypeError(
                 "You must provide the username when creating this class to use this method."
             )
 
         quoted_username = quote(self.username)
-        # r = requests.get(
-        #     "https://tiktok.com/@{}?lang=en".format(quoted_username),
-        #     headers={
-        #         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
-        #         "path": "/@{}".format(quoted_username),
-        #         "Accept-Encoding": "gzip, deflate",
-        #         "Connection": "keep-alive",
-        #         "User-Agent": self.parent._user_agent,
-        #     },
-        #     proxies=User.parent._format_proxy(kwargs.get("proxy", None)),
-        #     cookies=User.parent._get_cookies(**kwargs),
-        #     **User.parent._requests_extra_kwargs,
-        # )
-
-        # data = extract_tag_contents(r.text)
-        # user = json.loads(data)
-
-        # user_props = user["props"]["pageProps"]
-        # if user_props["statusCode"] == 404:
-        #     raise NotFoundException(
-        #         "TikTok user with username {} does not exist".format(self.username)
-        #     )
-
-        # return user_props["userInfo"]
-
-        # """
-        # TODO: There is a route for user info, but uses msToken :\
-        # processed = self.parent._process_kwargs(kwargs)
-        # kwargs["custom_device_id"] = processed.device_id
-        # """
-        query = {
-            "uniqueId": quoted_username,
-            "secUid": "",
-            "msToken": "pqYmgG5mKwmedyZw17XxHyeXtr5eOjFwEYGXDrBYNC8WdKgmiITq2KlZrdrM8sFURfQ2NuMlUYW30QfKjvjAakEJSEio9JHoxAxHMQ82hn3TmDiHZKCt1i0izP3Bi1ZiopAlrkhj",
-        }
-
-        path = "api/user/detail/?{}&{}".format(
-            User.parent._add_url_params(), urlencode(query)
-        )
-
-        res = User.parent.get_data(path, subdomain="m", **kwargs)
-
-        return res["userInfo"]
+      
+        with sync_playwright() as playwright:
+            url =   "https://tiktok.com/@{}?lang=en".format(quoted_username)
+            response = {}
+            global tmpUrl
+            tmpUrl = ""
+            chromium = playwright.chromium
+            browser = chromium.launch()
+            page = browser.new_page()
+            page.on("request", url2request)
+            page.goto(url)
+            with page.expect_event("requestfinished"):
+                response = page.goto(tmpUrl).json()
+            browser.close()
+        return response["userInfo"]
 
     def videos(self, count=30, cursor=0, **kwargs) -> Iterator[Video]:
         """
@@ -371,3 +344,9 @@ class User:
             return self.__getattribute__(name)
 
         raise AttributeError(f"{name} doesn't exist on TikTokApi.api.User")
+
+def url2request(request):
+      if "/api/user" in request.url:
+        # print(request.url)
+        global tmpUrl
+        tmpUrl = request.url
