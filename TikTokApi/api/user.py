@@ -10,7 +10,9 @@ from ..helpers import extract_tag_contents
 
 from typing import TYPE_CHECKING, ClassVar, Iterator, Optional
 from .vidBean import VidBean
+
 from playwright.sync_api import sync_playwright
+from urllib.parse import urlencode,parse_qs, urlsplit, urlunsplit
 
 if TYPE_CHECKING:
     from ..tiktok import TikTokApi
@@ -43,7 +45,7 @@ class User:
     as_dict: dict
     """The raw data associated with this user."""
 
-    def __init__(
+    def __init__(  
         self,
         username: Optional[str] = None,
         user_id: Optional[str] = None,
@@ -76,31 +78,40 @@ class User:
         Includes statistics about this user.
 
         Example Usage
+
+        by username
         ```py
         user_data = api.user(username='therock').info_full()
         ```
+
+        or by id
+          ```py
+        user_data = api.user(user_id='').info_full()
+        ```
         """
 
-        if not self.username:
+        if not (self.username or self.user_id) :
             raise TypeError(
-                "You must provide the username when creating this class to use this method."
+                "You must provide the username or userID when creating this class to use this method."
             )
-
-        quoted_username = quote(self.username)
       
         with sync_playwright() as playwright:
-            url =   "https://tiktok.com/@{}?lang=en".format(quoted_username)
+            url =   "https://tiktok.com/@{}?lang=en".format(self.username)
+            if not self.username:
+                url =   "https://tiktok.com/@{}?lang=en".format(self.user_id)
             response = {}
             global tmpUrl
             tmpUrl = ""
             chromium = playwright.chromium
-            browser = chromium.launch(args=["--disable-gpu", "--single-process"], headless=True)
+            browser = chromium.launch(args=["--headless, --disable-gpu", "--single-process"], headless=True)
             page = browser.new_page()
-            page.on("request", url2request)
+            page.on("request", get_url)
             page.goto(url)
             with page.expect_event("requestfinished"):
-                locate = wait_url(30)
+                locate = wait_url(5)
                 if locate == False:
+                    page.pause()
+                    browser.close()
                     raise TypeError(
                     "Request time out."
                 )
@@ -126,7 +137,7 @@ class User:
         processed = User.parent._process_kwargs(kwargs)
         kwargs["custom_device_id"] = processed.device_id
 
-        if not self.user_id and not self.sec_uid:
+        if not self.user_id or not self.sec_uid:
             self.__find_attributes()
         first = True
         amount_yielded = 0
@@ -147,7 +158,6 @@ class User:
             path = "api/post/item_list/?{}&{}".format(
                 User.parent._add_url_params(), urlencode(query)
             )
-
             res = User.parent.get_data(path,send_tt_params=True, **kwargs)
             
             # print(res)
@@ -323,7 +333,6 @@ class User:
         # found = False
         # print(self)
         # for u in self.parent.search.users(self.username):
-        #     print("dentro")
         #     print(u)
         #     if u.username == self.username:
         #         found = True
@@ -350,11 +359,12 @@ class User:
 
         raise AttributeError(f"{name} doesn't exist on TikTokApi.api.User")
 
-def url2request(request):
+def get_url(request):
     if "/api/user" in request.url:
         # print(request.url)
         global tmpUrl
         tmpUrl = request.url
+        return
 
 def wait_url(timeout, period=0.25):
     mustend = time.time() + timeout
