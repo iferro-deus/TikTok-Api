@@ -11,8 +11,13 @@ from ..helpers import extract_tag_contents
 from typing import TYPE_CHECKING, ClassVar, Iterator, Optional
 from .vidBean import VidBean
 
-from playwright.sync_api import sync_playwright
-from urllib.parse import urlencode,parse_qs, urlsplit, urlunsplit
+from playwright.sync_api import (
+    Page,
+    sync_playwright
+)
+
+from urllib.parse import urlencode
+import json
 
 if TYPE_CHECKING:
     from ..tiktok import TikTokApi
@@ -56,6 +61,7 @@ class User:
         You must provide the username or (user_id and sec_uid) otherwise this
         will not function correctly.
         """
+        self._user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36"  # TODO: Randomly generate agents
         self.__update_id_sec_uid_username(user_id, sec_uid, username)
         if data is not None:
             self.as_dict = data
@@ -70,7 +76,7 @@ class User:
         user_data = api.user(username='therock').info()
         ```
         """
-        return self.info_full(**kwargs)["user"]
+        return self.info_full(**kwargs)
 
     def info_full(self, **kwargs) -> dict:
         """
@@ -103,21 +109,29 @@ class User:
             global tmpUrl
             tmpUrl = ""
             chromium = playwright.chromium
-            browser = chromium.launch(args=["--headless, --disable-gpu", "--single-process"], headless=True)
-            page = browser.new_page()
-            page.on("request", get_url)
-            page.goto(url)
-            with page.expect_event("requestfinished"):
-                locate = wait_url(5)
-                if locate == False:
-                    page.pause()
-                    browser.close()
-                    raise TypeError(
-                    "Request time out."
+            browser = chromium.launch(headless=None)
+            context_kwargs = playwright.devices["Desktop Edge"]
+            context = browser.new_context(**context_kwargs)
+            page: Page = context.new_page()
+            try:
+                page.goto(url)
+                page.wait_for_selector("#SIGI_STATE", state="attached")
+
+                content = page.content()
+                data = content.split('<script id="SIGI_STATE" type="application/json">')[
+                        1
+                ].split("</script>")[0]
+                response =  json.loads(data)
+            except (TimeoutError, IndexError) as e:
+                print("Exception "+str(e))
+                page.close()
+                browser.close()
+                raise ValueError(
+                    f"Could not get data from parse"
                 )
-                response = page.goto(tmpUrl).json()
+            page.close()
             browser.close()
-        return response["userInfo"]
+            return response
 
     def videos(self, count=30, cursor=0, **kwargs) -> Iterator[Video]:
         """
@@ -340,7 +354,8 @@ class User:
         #         break
 
         # if not found:
-        user_object = self.info()
+        full_data = self.info()
+        user_object = full_data["UserModule"]["users"][self.username]
         self.__update_id_sec_uid_username(
             user_object["id"], user_object["secUid"], user_object["uniqueId"]
         )
