@@ -77,6 +77,7 @@ ERROR_CODES = {
 }
 
 
+ITEM_LIST_URL = "https://www.tiktok.com/api/post/item_list/?aid=1988&app_language=en&app_name=tiktok_web&browser_language=en-US&browser_name=Mozilla&browser_online=true&browser_platform=MacIntel&browser_version=5.0%20%28Macintosh%29&channel=tiktok_web&cookie_enabled=true&device_id=7178828273953113606&device_platform=web_pc&focus_state=true&from_page=user&history_len=7&is_fullscreen=false&is_page_visible=true&os=mac&priority_region=&referer=&region=ES&screen_height=1050&screen_width=1680&tz_name=Europe%2FMadrid&verifyFp=verify_lbvzjxip_kRj7FAED_EjTx_4meu_8kwv_mIdhI96Vp6ps&webcast_language=en&msToken=E2fmdSHM1ishgL5xSfnih0uJJP9wWoF5B-7WO-Avbd4O_vf2mbnDtMQ3PlB-L9EezyevXYgCUJ8uMElztdEZaIX-XhIbHuVcZ-R5xWxBb5yivjxt8YA6QE6O7iZyMO2Xt3314b0AOy9hjw==&X-Bogus=DFSzsIVYkPUANtRhSkbA5PjIVUXm&_signature=_02B4Z6wo00001uIuyBgAAIDDZAbtvrCiLU7iL8yAANsz20"
 class TikTokApi:
     _is_context_manager = False
     user = User
@@ -190,7 +191,7 @@ class TikTokApi:
         if kwargs.get("custom_did") != None:
             raise Exception("Please use 'custom_device_id' instead of 'custom_did'")
         self._custom_device_id = kwargs.get("custom_device_id", None)
-        self._user_agent = "5.0 (iPhone; CPU iPhone OS 14_8 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Mobile/15E148 Safari/604.1"  # TODO: Randomly generate agents
+        self._user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:107.0) Gecko/20100101 Firefox/107.0"  # TODO: Randomly generate agents
         self._proxy = kwargs.get("proxy", None)
         self._custom_verify_fp = kwargs.get("custom_verify_fp")
         self._signer_url = kwargs.get("external_signer", None)
@@ -255,10 +256,8 @@ class TikTokApi:
                 verifyFp = "verify_khr3jabg_V7ucdslq_Vrw9_4KPb_AJ1b_Ks706M8zIJTq"
         else:
             verifyFp = kwargs.get("custom_verify_fp")
-
         tt_params = None
         send_tt_params = kwargs.get("send_tt_params", False)
-
         full_url = f"https://{subdomain}.tiktok.com/" + path
 
         if self._signer_url is None:
@@ -266,6 +265,7 @@ class TikTokApi:
             (
                 verify_fp,
                 device_id,
+                xBogus,
                 signature,
                 tt_params,
             ) = asyncio.get_event_loop().run_until_complete(
@@ -295,25 +295,33 @@ class TikTokApi:
 
         if not kwargs.get("send_tt_params", False):
             tt_params = None
-
-        query = {"verifyFp": verify_fp, "device_id": device_id, "_signature": signature}
-        url = "{}&{}".format(full_url, urlencode(query))
-
-        h = requests.head(
-            url,
-            headers={"x-secsdk-csrf-version": "1.2.5", "x-secsdk-csrf-request": "1"},
+        spawn = requests.get(
+            "https://m.tiktok.com/",
+            headers={"x-secsdk-csrf-version": "1.2.5", "x-secsdk-csrf-request": "1","User-Agent":user_agent},
             proxies=self._format_proxy(processed.proxy),
             **self._requests_extra_kwargs,
         )
-
+        ttwid = spawn.cookies["ttwid"]
+        msToken =spawn.cookies["msToken"]
+        tt_chain_token = spawn.cookies["tt_chain_token"]
+        query = {"verifyFp": verify_fp, "device_id": device_id, "msToken": msToken, "X-Bogus": xBogus, "_signature": signature}
+        url = "{}&{}".format(full_url, urlencode(query))
+        """
+        h = requests.get(
+            url,
+            #headers={"x-secsdk-csrf-version": "1.2.5", "x-secsdk-csrf-request": "1"},
+            headers={"x-secsdk-csrf-version": "1.2.5", "x-secsdk-csrf-request": "1","User-Agent":user_agent},
+            proxies=self._format_proxy(processed.proxy),
+            **self._requests_extra_kwargs,
+        )
         csrf_token = None
         if subdomain == "m":
             csrf_session_id = h.cookies["csrf_session_id"]
             csrf_token = h.headers["X-Ware-Csrf-Token"].split(",")[1]
             kwargs["csrf_session_id"] = csrf_session_id
-
+        """
         headers = {
-            "authority": "m.tiktok.com",
+            "authority": "www.tiktok.com",
             "method": "GET",
             "path": url.split("tiktok.com")[1],
             "scheme": "https",
@@ -327,14 +335,36 @@ class TikTokApi:
             "sec-fetch-site": "none",
             "sec-gpc": "1",
             "user-agent": user_agent,
-            "x-secsdk-csrf-token": csrf_token,
+            #"user-agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.5 (KHTML, like Gecko) Chrome/19.0.1084.52 Safari/536.5",
+            #"x-secsdk-csrf-token": csrf_token,
+            "ttwid": ttwid,
             "x-tt-params": tt_params,
         }
+
+        # The api under /api/post/item_list is the only one to verify a valid X-Bogus argument
+        # Attempts have been made to generate a valid argument, but TikTok's algorithm seems to be in flux
+        # However, none of the info in the URL is relevant to the request, since everything is encoded in the header x-tt-params
+        # We can take a "real" URL generated by a real browser in normal operation, and use it as our request URL
+        if "/api/post/item_list" in url:
+            url = ITEM_LIST_URL
+
+        cookies = self._get_cookies(**kwargs)
+        cookies["ttwid"]=ttwid
+        cookies["msToken"]=msToken
+        #cookies["s_v_web_id"] = "verify_lbvzjxip_kRj7FAED_EjTx_4meu_8kwv_mIdhI96Vp6ps"
+        cookies["tiktok_webapp_theme"] = "light"
+        cookies["tt_chain_token"] = tt_chain_token
+        cookies["cookie-consent"] =	"{\"ga\":false,\"af\":false,\"fbp\":false,\"lip\":false,\"bing\":false,\"ttads\":false,\"reddit\":false,\"criteo\":false,\"version\":\"v9\"}"
+
+
+        for name,value in spawn.cookies.get_dict().items():
+            cookies[name]=value
+
         self.logger.debug(f"GET: %s\n\theaders: %s", url, headers)
         r = requests.get(
             url,
             headers=headers,
-            cookies=self._get_cookies(**kwargs),
+            cookies=cookies,
             proxies=self._format_proxy(processed.proxy),
             **self._requests_extra_kwargs,
         )

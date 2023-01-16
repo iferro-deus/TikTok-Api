@@ -12,7 +12,7 @@ from .browser_interface import BrowserInterface
 from urllib.parse import parse_qsl, urlparse
 import threading
 from ..utilities import LOGGER_NAME
-from .get_acrawler import _get_acrawler, _get_tt_params_script
+from .get_acrawler import _get_acrawler, _get_tt_params_script, _get_xbogus
 from playwright.async_api import async_playwright
 import asyncio
 
@@ -127,7 +127,7 @@ class browser(BrowserInterface):
 
         context = await self.browser.new_context(**iphone)
         if set_useragent:
-            self.user_agent = iphone["user_agent"]
+            self.user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:107.0) Gecko/20100101 Firefox/107.0"
 
         return context
 
@@ -210,6 +210,7 @@ class browser(BrowserInterface):
 
         url = "{}&verifyFp={}&device_id={}".format(url, verifyFp, device_id)
 
+        # print(_get_acrawler())
         await page.add_script_tag(content=_get_acrawler())
         evaluatedPage = await page.evaluate(
             '''() => {
@@ -224,6 +225,27 @@ class browser(BrowserInterface):
 
         url = "{}&_signature={}".format(url, evaluatedPage)
 
+        # TODO The X-Bogus calculation doesn't seem to follow the current protocol, that is in flux at the time of writing
+        # await page.add_script_tag(content=_get_xbogus())
+        # # await page.add_script_tag(url="https://raw.githubusercontent.com/carcabot/tiktok-signature/698745fdd7ab97ab1f545e3f2000d43dd3ae8cb2/javascript/webmssdk.js")
+        # # await page.add_script_tag(path="/TikTok/TikTok-Api/TikTokApi/browser_utilities/webmssdk_tktk.js")
+        
+        # await page.evaluate(
+        #     '''() => {
+        #     window.generateBogus = function generateBogus(params) {
+        #         if (typeof window._0x4879d2 !== "function") {
+        #         throw "No X-Bogus function found";
+        #         }
+        #         return window._0x4879d2(params);
+        #     };
+        #     return this;
+        #     }
+        #     '''    
+        # )
+        # query = json.dumps(dict(parse_qsl(urlparse(url).query)))
+        # xBogus = await page.evaluate("generateBogus('"+query+"')")
+        xBogus = ""
+
         if calc_tt_params:
             await page.add_script_tag(content=_get_tt_params_script())
 
@@ -237,7 +259,7 @@ class browser(BrowserInterface):
             )
 
         await context.close()
-        return (verifyFp, device_id, evaluatedPage, tt_params)
+        return (verifyFp, device_id, xBogus, evaluatedPage, tt_params)
 
     async def _clean_up(self):
         await self.browser.close()
