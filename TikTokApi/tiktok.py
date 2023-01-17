@@ -560,6 +560,7 @@ class TikTokApi:
             (
                 verify_fp,
                 device_id,
+                XBogus,
                 signature,
                 _,
             ) = asyncio.get_event_loop().run_until_complete(
