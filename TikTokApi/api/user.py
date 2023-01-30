@@ -109,7 +109,7 @@ class User:
             global tmpUrl
             tmpUrl = ""
             chromium = playwright.chromium
-            browser = chromium.launch(headless=None)
+            browser = chromium.launch(args=["--headless, --disable-gpu", "--single-process"], headless=True)            
             context_kwargs = playwright.devices["Desktop Edge"]
             context = browser.new_context(**context_kwargs)
             page: Page = context.new_page()
