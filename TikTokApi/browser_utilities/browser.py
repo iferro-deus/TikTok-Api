@@ -127,7 +127,7 @@ class browser(BrowserInterface):
 
         context = await self.browser.new_context(**iphone)
         if set_useragent:
-            self.user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:107.0) Gecko/20100101 Firefox/107.0"
+            self.user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/109.0"
 
         return context
 
@@ -187,6 +187,12 @@ class browser(BrowserInterface):
                 wait_until="load",
             )
 
+        msToken = None
+        cookies = await context.cookies()
+        for cookie in cookies:
+            if cookie["name"] == "msToken":
+                msToken = cookie["value"]
+                
         verifyFp = "".join(
             random.choice(
                 string.ascii_lowercase + string.ascii_uppercase + string.digits
@@ -259,7 +265,7 @@ class browser(BrowserInterface):
             )
 
         await context.close()
-        return (verifyFp, device_id, xBogus, evaluatedPage, tt_params)
+        return (msToken, verifyFp, device_id, xBogus, evaluatedPage, tt_params)
 
     async def _clean_up(self):
         await self.browser.close()

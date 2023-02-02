@@ -77,7 +77,8 @@ ERROR_CODES = {
 }
 
 
-ITEM_LIST_URL = "https://www.tiktok.com/api/post/item_list/?aid=1988&app_language=en&app_name=tiktok_web&browser_language=en-US&browser_name=Mozilla&browser_online=true&browser_platform=MacIntel&browser_version=5.0%20%28Macintosh%29&channel=tiktok_web&cookie_enabled=true&device_id=7178828273953113606&device_platform=web_pc&focus_state=true&from_page=user&history_len=7&is_fullscreen=false&is_page_visible=true&os=mac&priority_region=&referer=&region=ES&screen_height=1050&screen_width=1680&tz_name=Europe%2FMadrid&verifyFp=verify_lbvzjxip_kRj7FAED_EjTx_4meu_8kwv_mIdhI96Vp6ps&webcast_language=en&msToken=E2fmdSHM1ishgL5xSfnih0uJJP9wWoF5B-7WO-Avbd4O_vf2mbnDtMQ3PlB-L9EezyevXYgCUJ8uMElztdEZaIX-XhIbHuVcZ-R5xWxBb5yivjxt8YA6QE6O7iZyMO2Xt3314b0AOy9hjw==&X-Bogus=DFSzsIVYkPUANtRhSkbA5PjIVUXm&_signature=_02B4Z6wo00001uIuyBgAAIDDZAbtvrCiLU7iL8yAANsz20"
+ITEM_LIST_URL = "https://www.tiktok.com/api/post/item_list/?aid=1988&app_language=en&app_name=tiktok_web&browser_language=en-US&browser_name=Mozilla&browser_online=true&browser_platform=MacIntel&browser_version=5.0%20%28Macintosh%29&channel=tiktok_web&cookie_enabled=true&device_id=7195125117846980101&device_platform=web_pc&focus_state=true&from_page=user&history_len=3&is_fullscreen=false&is_page_visible=true&os=mac&priority_region=&referer=&region=ES&screen_height=1050&screen_width=1680&tz_name=Europe%2FMadrid&webcast_language=en&msToken=jHVUaK5nfp_jTDJ4gfs_f_XKpTxURWlwbOxmfhd_0t2d9gDNs_m94A4YYprUs0SW_561qJfu-1zvr_cCYHq6dWVeb3C1gqWE7EFJx1dx6nJ94R4RPHau70aF0bBi9VNcnyytGfNKRgYE&X-Bogus=DFSzsIVY-ntANJ5dS4c85PjIVUXt&_signature=_02B4Z6wo00001kpeTmQAAIDDzHZrwy2FerpKX0rAAPFcde"
+
 class TikTokApi:
     _is_context_manager = False
     user = User
@@ -263,6 +264,7 @@ class TikTokApi:
         if self._signer_url is None:
             kwargs["custom_verify_fp"] = verifyFp
             (
+                msToken,
                 verify_fp,
                 device_id,
                 xBogus,
@@ -302,7 +304,7 @@ class TikTokApi:
             **self._requests_extra_kwargs,
         )
         ttwid = spawn.cookies["ttwid"]
-        msToken =spawn.cookies["msToken"]
+        # msToken =spawn.cookies["msToken"]
         tt_chain_token = spawn.cookies["tt_chain_token"]
         query = {"verifyFp": verify_fp, "device_id": device_id, "msToken": msToken, "X-Bogus": xBogus, "_signature": signature}
         url = "{}&{}".format(full_url, urlencode(query))
@@ -558,6 +560,7 @@ class TikTokApi:
         kwargs["custom_device_id"] = processed.device_id
         if self._signer_url is None:
             (
+                msToken,
                 verify_fp,
                 device_id,
                 XBogus,
