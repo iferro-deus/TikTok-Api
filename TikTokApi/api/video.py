@@ -40,6 +40,7 @@ class Video:
     """A List of Hashtags on the Video"""
     as_dict: dict
     """The raw data associated with this Video."""
+    stickers: list[dict]
 
     def __init__(
         self,
@@ -51,6 +52,7 @@ class Video:
         You must provide the id or a valid url, else this will fail.
         """
         self.id = id
+        self.stickers = []
         if data is not None:
             self.as_dict = data
             self.__extract_from_data()
@@ -125,7 +127,10 @@ class Video:
             self.stats = data["stats"]
             self.author = self.parent.user(data=data["author"])
             self.sound = self.parent.sound(data=data["music"])
-
+            if "stickersOnItem" in keys:
+                self.stickers = data["stickersOnItem"]
+            else :
+                self.stickers = []
             self.hashtags = [
                 self.parent.hashtag(data=hashtag)
                 for hashtag in data.get("challenges", [])
