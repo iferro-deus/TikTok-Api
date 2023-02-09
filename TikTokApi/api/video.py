@@ -40,7 +40,9 @@ class Video:
     """A List of Hashtags on the Video"""
     as_dict: dict
     """The raw data associated with this Video."""
+    
     stickers: list[dict]
+    author_stats: Optional[dict]
 
     def __init__(
         self,
@@ -131,6 +133,12 @@ class Video:
                 self.stickers = data["stickersOnItem"]
             else :
                 self.stickers = []
+
+            if "authorStats" in keys:
+                self.author_stats = data["authorStats"]
+            else :
+                self.author_stats = []
+
             self.hashtags = [
                 self.parent.hashtag(data=hashtag)
                 for hashtag in data.get("challenges", [])
