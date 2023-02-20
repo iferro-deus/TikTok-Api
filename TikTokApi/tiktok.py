@@ -405,7 +405,7 @@ class TikTokApi:
                                       ERROR_CODES.get(statusCode, f"TikTok sent an unknown StatusCode of {statusCode}")
                                       )
             output = r.json()
-            output["Cookies"]=cookies
+            output["cookies"]=cookies
             return output
         except ValueError as e:
             text = r.text
