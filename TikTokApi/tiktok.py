@@ -404,8 +404,9 @@ class TikTokApi:
                 raise TikTokException(statusCode, r,
                                       ERROR_CODES.get(statusCode, f"TikTok sent an unknown StatusCode of {statusCode}")
                                       )
-
-            return r.json()
+            output = r.json()
+            output["Cookies"]=cookies
+            return output
         except ValueError as e:
             text = r.text
             self.logger.debug("TikTok response: %s", text)
